@@ -1,7 +1,7 @@
 import Book from '../models/Book.js';
 import { initialBooks } from '../data/initialBooks.js';
 
-// @desc    Get all books with optional search, category filter, and limit
+// @desc    Get all books from MongoDB Archive (serves JSON data)
 // @route   GET /books
 // @access  Public
 export const getBooks = async (req, res) => {
@@ -19,21 +19,17 @@ export const getBooks = async (req, res) => {
       query.userEmail = userEmail.toLowerCase();
     }
 
-    // Text Search
+    // Search by title or author
     if (search && search.trim() !== '') {
       const searchRegex = new RegExp(search.trim(), 'i');
       query.$or = [{ title: searchRegex }, { author: searchRegex }];
     }
 
-    // Sort order
-    let sortOption = { createdAt: -1 }; // Newest first by default
-    if (sort === 'oldest') {
-      sortOption = { createdAt: 1 };
-    } else if (sort === 'title') {
-      sortOption = { title: 1 };
-    } else if (sort === 'copies') {
-      sortOption = { copies: -1 };
-    }
+    // Sort order (default newest first)
+    let sortOption = { createdAt: -1 };
+    if (sort === 'oldest') sortOption = { createdAt: 1 };
+    else if (sort === 'title') sortOption = { title: 1 };
+    else if (sort === 'copies') sortOption = { copies: -1 };
 
     let booksQuery = Book.find(query).sort(sortOption);
 
@@ -46,7 +42,7 @@ export const getBooks = async (req, res) => {
 
     let books = await booksQuery.exec();
 
-    // If database is completely empty and no filters applied, seed curated library books
+    // If database is empty, seed initial books into MongoDB
     if (books.length === 0 && Object.keys(query).length === 0 && (!limit || parseInt(limit, 10) >= 6)) {
       const count = await Book.countDocuments();
       if (count === 0 && initialBooks && initialBooks.length > 0) {
@@ -60,13 +56,13 @@ export const getBooks = async (req, res) => {
     console.error('[getBooks Error]:', error.message);
     return res.status(500).json({
       success: false,
-      message: 'Failed to retrieve books from library archive',
+      message: 'Failed to retrieve books from MongoDB.',
       error: error.message,
     });
   }
 };
 
-// @desc    Get single book by ID
+// @desc    Get single book details by ID from MongoDB
 // @route   GET /books/:id
 // @access  Public
 export const getBookById = async (req, res) => {
@@ -77,7 +73,7 @@ export const getBookById = async (req, res) => {
     if (!book) {
       return res.status(404).json({
         success: false,
-        message: 'Book not found in library inventory',
+        message: 'Book not found in MongoDB catalog.',
       });
     }
 
@@ -86,13 +82,13 @@ export const getBookById = async (req, res) => {
     console.error('[getBookById Error]:', error.message);
     return res.status(500).json({
       success: false,
-      message: 'Failed to fetch book details',
+      message: 'Failed to fetch book from database.',
       error: error.message,
     });
   }
 };
 
-// @desc    Add a new book
+// @desc    Add a new book - Data goes directly to MongoDB and returns as JSON
 // @route   POST /books
 // @access  Private (JWT Protected)
 export const createBook = async (req, res) => {
@@ -102,11 +98,11 @@ export const createBook = async (req, res) => {
     if (!title || !author || !category || !image || !description) {
       return res.status(400).json({
         success: false,
-        message: 'Please provide all required fields: title, author, category, image, and description.',
+        message: 'All fields (title, author, category, image, description) are required.',
       });
     }
 
-    const userName = req.user?.name || req.body.userName || 'Library Contributor';
+    const userName = req.user?.name || req.body.userName || 'FavBook Contributor';
     const userEmail = (req.user?.email || req.body.userEmail || '').toLowerCase();
 
     if (!userEmail) {
@@ -116,6 +112,7 @@ export const createBook = async (req, res) => {
       });
     }
 
+    // 1. Data goes directly to MongoDB
     const newBook = new Book({
       title: title.trim(),
       author: author.trim(),
@@ -130,22 +127,23 @@ export const createBook = async (req, res) => {
 
     const savedBook = await newBook.save();
 
+    // 2. Returns formatted JSON directly to client & updates archive
     return res.status(201).json({
       success: true,
-      message: 'Book added to BookHype library successfully!',
+      message: 'New book added to MongoDB successfully!',
       book: savedBook,
     });
   } catch (error) {
     console.error('[createBook Error]:', error.message);
     return res.status(500).json({
       success: false,
-      message: 'Failed to add book to the library catalog',
+      message: 'Failed to save book to MongoDB.',
       error: error.message,
     });
   }
 };
 
-// @desc    Update book details
+// @desc    Update book details in MongoDB
 // @route   PATCH /books/:id
 // @access  Private (JWT Protected)
 export const updateBook = async (req, res) => {
@@ -156,11 +154,11 @@ export const updateBook = async (req, res) => {
     if (!book) {
       return res.status(404).json({
         success: false,
-        message: 'Book not found in catalog',
+        message: 'Book not found in database.',
       });
     }
 
-    // Authorization check: only original contributor or admin can update
+    // Ownership verification
     const userEmail = (req.user?.email || '').toLowerCase();
     const isOwner = book.userEmail.toLowerCase() === userEmail;
     const isAdmin = req.user?.role === 'admin';
@@ -168,7 +166,7 @@ export const updateBook = async (req, res) => {
     if (!isOwner && !isAdmin) {
       return res.status(403).json({
         success: false,
-        message: 'Permission denied: You can only edit books you contributed to the library.',
+        message: 'Unauthorized: You can only edit books you added.',
       });
     }
 
@@ -185,20 +183,20 @@ export const updateBook = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: 'Book updated successfully in the library!',
+      message: 'Book updated successfully in MongoDB!',
       book: updatedBook,
     });
   } catch (error) {
     console.error('[updateBook Error]:', error.message);
     return res.status(500).json({
       success: false,
-      message: 'Failed to update book information',
+      message: 'Failed to update book in database.',
       error: error.message,
     });
   }
 };
 
-// @desc    Delete a book from library
+// @desc    Delete book from MongoDB
 // @route   DELETE /books/:id
 // @access  Private (JWT Protected)
 export const deleteBook = async (req, res) => {
@@ -209,11 +207,11 @@ export const deleteBook = async (req, res) => {
     if (!book) {
       return res.status(404).json({
         success: false,
-        message: 'Book not found in catalog',
+        message: 'Book not found in database.',
       });
     }
 
-    // Authorization check
+    // Ownership verification
     const userEmail = (req.user?.email || '').toLowerCase();
     const isOwner = book.userEmail.toLowerCase() === userEmail;
     const isAdmin = req.user?.role === 'admin';
@@ -221,7 +219,7 @@ export const deleteBook = async (req, res) => {
     if (!isOwner && !isAdmin) {
       return res.status(403).json({
         success: false,
-        message: 'Permission denied: You can only remove books you added.',
+        message: 'Unauthorized: You can only delete books you contributed.',
       });
     }
 
@@ -229,13 +227,13 @@ export const deleteBook = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: 'Book removed from BookHype library archive successfully.',
+      message: 'Book deleted from MongoDB archive successfully.',
     });
   } catch (error) {
     console.error('[deleteBook Error]:', error.message);
     return res.status(500).json({
       success: false,
-      message: 'Failed to delete book from archive',
+      message: 'Failed to delete book from database.',
       error: error.message,
     });
   }
