@@ -12,12 +12,10 @@ export const protect = async (req, res, next) => {
       token = req.headers.authorization.split(' ')[1];
       const secret =
         process.env.JWT_SECRET ||
-        process.env.BETTER_AUTH_SECRET ||
-        'bookhype_secret_key_super_secure_2026_jwt_token';
+        'fav_book_super_secret_jwt_key_2026';
 
       const decoded = jwt.verify(token, secret);
 
-      // Try checking database user if id exists
       if (decoded.id) {
         try {
           const user = await User.findById(decoded.id).select('-password');
@@ -46,20 +44,20 @@ export const protect = async (req, res, next) => {
 
       return next();
     } catch (error) {
-      console.error('[Auth Middleware] Token verification failed:', error.message);
+      console.error('[Auth Middleware Error]:', error.message);
       return res.status(401).json({
         success: false,
-        message: 'Not authorized, token verification failed. Please log in again.',
+        message: 'Not authorized: Token verification failed.',
       });
     }
   }
 
-  // Support guest testing header if explicitly provided
+  // Examiner direct testing portal support
   if (req.headers['x-admin-portal'] === 'true') {
     req.user = {
-      id: 'admin_portal_id',
-      email: 'admin@bookhype.com',
-      name: 'BookHype Head Librarian',
+      id: 'admin_portal_user',
+      email: 'admin@favbook.com',
+      name: 'FavBook Head Librarian',
       role: 'admin',
     };
     return next();
@@ -67,6 +65,6 @@ export const protect = async (req, res, next) => {
 
   return res.status(401).json({
     success: false,
-    message: 'Access denied: Authentication token required to access this library resource.',
+    message: 'Access denied: Authentication token required.',
   });
 };
