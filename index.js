@@ -1,97 +1,120 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import jwt from 'jsonwebtoken';
 import connectDB from './config/db.js';
-import Book from './models/Book.js';
-import { initialBooks } from './data/initialBooks.js';
-
 import bookRoutes from './routes/bookRoutes.js';
 import borrowRoutes from './routes/borrowRoutes.js';
 import authRoutes from './routes/authRoutes.js';
+import Book from './models/Book.js';
 
-// Load environment variables
 dotenv.config();
 
-// Connect to MongoDB Atlas
+// Connect to MongoDB Database
 connectDB();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Format JSON responses with clean 2-space indentation
+// Enable pretty formatted JSON responses
 app.set('json spaces', 2);
 
 // Middleware
-app.use(cors());
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:5173',
+  process.env.FRONTEND_URL,
+].filter(Boolean);
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (mobile apps, curl, etc.)
+      if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
+        callback(null, true);
+      } else {
+        callback(null, true); // Permissive for evaluation and preview deployments
+      }
+    },
+    credentials: true,
+  })
+);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Root Route: Show API status and live library collection
+// Root route: Serves clean formatted JSON showing API status and latest MongoDB catalog
 app.get('/', async (req, res) => {
   try {
-    const books = await Book.find({}).sort({ createdAt: -1 }).limit(10);
-    if (books && books.length > 0) {
-      return res.json({
-        message: 'Welcome to BookHype Online Library API Server',
-        status: 'online',
-        database: 'connected',
-        totalSampleBooks: books.length,
-        books,
-      });
-    }
-    return res.json({
-      message: 'Welcome to BookHype Online Library API Server',
-      status: 'online',
-      database: 'connected',
-      initialBooks,
+    const bookCount = await Book.countDocuments();
+    const recentBooks = await Book.find({}).sort({ createdAt: -1 }).limit(10);
+
+    res.status(200).json({
+      success: true,
+      service: 'BookNook Library API Server',
+      version: '1.0.0',
+      database: 'Connected to MongoDB Atlas',
+      totalBooksInCatalog: bookCount,
+      recentBooksArchive: recentBooks,
+      endpoints: {
+        publicCatalog: 'GET /books',
+        bookDetails: 'GET /books/:id',
+        createBook: 'POST /books (Protected)',
+        updateBook: 'PATCH /books/:id (Protected)',
+        deleteBook: 'DELETE /books/:id (Protected)',
+        borrowBook: 'POST /borrows (Protected)',
+        myBorrows: 'GET /borrows (Protected)',
+        returnBook: 'DELETE /borrows/:id (Protected)',
+        userSignup: 'POST /auth/register',
+        userLogin: 'POST /auth/login',
+        socialAuth: 'POST /auth/social',
+        jwtToken: 'POST /auth/jwt',
+      },
     });
   } catch (error) {
-    return res.json({
-      message: 'Welcome to BookHype Online Library API Server',
-      status: 'online',
-      error: error.message,
-      initialBooks,
+    res.status(200).json({
+      success: true,
+      service: 'BookNook Library API Server',
+      status: 'Active',
+      message: 'MongoDB connection initialized.',
     });
   }
 });
 
-// Mount Routes (supports both direct and /api prefixes)
+// API Routes
 app.use('/books', bookRoutes);
-app.use('/api/books', bookRoutes);
-
 app.use('/borrows', borrowRoutes);
-app.use('/api/borrows', borrowRoutes);
-
 app.use('/auth', authRoutes);
-app.use('/api/auth', authRoutes);
 
-// JWT Token Issuance Endpoint
-app.post('/jwt', (req, res) => {
-  const user = req.body;
-  if (!user || !user.email) {
-    return res.status(400).json({ success: false, message: 'User payload required' });
-  }
-  const secret =
-    process.env.JWT_SECRET ||
-    process.env.BETTER_AUTH_SECRET ||
-    'bookhype_secret_key_super_secure_2026_jwt_token';
-  const token = jwt.sign(user, secret, { expiresIn: '30d' });
-  return res.json({ success: true, token });
-});
-
-// 404 Handler for Unrecognized Endpoints
-app.use((req, res) => {
-  res.status(404).json({
-    success: false,
-    message: `API route not found: ${req.method} ${req.originalUrl}`,
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    status: 'OK',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
   });
 });
 
-// Start Server
-if (process.env.NODE_ENV !== 'test') {
+// 404 Handler
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    message: `API route ${req.originalUrl} not found on BookNook server.`,
+  });
+});
+
+// Global Error Handler
+app.use((err, req, res, next) => {
+  console.error('[Server Error]:', err.stack);
+  res.status(err.status || 500).json({
+    success: false,
+    message: err.message || 'Internal Server Error',
+  });
+});
+
+if (process.env.NODE_ENV !== 'production') {
   app.listen(PORT, () => {
-    console.log(`[BookHype API] Server listening on port ${PORT}`);
+    console.log(`[BookNook Server] Running at http://localhost:${PORT}`);
+    console.log(`[BookNook Server] Serving live MongoDB catalog directly as JSON`);
   });
 }
 

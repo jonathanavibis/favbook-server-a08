@@ -1,7 +1,7 @@
 {
-  "name": "bookhype-server",
+  "name": "fav-book-server",
   "version": "1.0.0",
-  "description": "REST API Backend Server for BookHype Online Library Management Platform",
+  "description": "REST API Backend Server for FavBook Online Library Management Platform",
   "main": "index.js",
   "type": "module",
   "scripts": {
@@ -13,8 +13,8 @@
     "mongodb",
     "mongoose",
     "jwt",
-    "bookhype",
-    "library",
+    "fav-book",
+    "library-api",
     "assignment-8"
   ],
   "author": "Jonathan Avi Biswas",
