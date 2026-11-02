@@ -17,16 +17,16 @@ const bookSchema = new mongoose.Schema(
       required: [true, 'Book category is required'],
       enum: {
         values: ['Fiction', 'Science', 'History', 'Kids', 'Others'],
-        message: 'Category must be one of Fiction, Science, History, Kids, or Others',
+        message: 'Category must be Fiction, Science, History, Kids, or Others',
       },
     },
     image: {
       type: String,
-      required: [true, 'Book cover image is required'],
+      required: [true, 'Book cover image URL is required'],
     },
     description: {
       type: String,
-      required: [true, 'Book description is required'],
+      required: [true, 'Book synopsis is required'],
       trim: true,
     },
     copies: {
@@ -58,7 +58,6 @@ const bookSchema = new mongoose.Schema(
   }
 );
 
-// Index for high performance search and category filtering
 bookSchema.index({ title: 'text', author: 'text', category: 1 });
 
 const Book = mongoose.models.Book || mongoose.model('Book', bookSchema);

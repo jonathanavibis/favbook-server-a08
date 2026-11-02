@@ -5,7 +5,7 @@ const borrowSchema = new mongoose.Schema(
     bookId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Book',
-      required: [true, 'Book ID is required for borrowing'],
+      required: [true, 'Book ID is required for loan record'],
     },
     bookTitle: {
       type: String,
@@ -14,11 +14,11 @@ const borrowSchema = new mongoose.Schema(
     },
     bookImage: {
       type: String,
-      required: [true, 'Book image is required'],
+      required: [true, 'Book cover image is required'],
     },
     userEmail: {
       type: String,
-      required: [true, 'Borrower email is required'],
+      required: [true, 'Borrower email address is required'],
       lowercase: true,
       trim: true,
     },
@@ -47,7 +47,6 @@ const borrowSchema = new mongoose.Schema(
   }
 );
 
-// Compound index to ensure fast checking for user active borrows
 borrowSchema.index({ bookId: 1, userEmail: 1, status: 1 });
 
 const Borrow = mongoose.models.Borrow || mongoose.model('Borrow', borrowSchema);

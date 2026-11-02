@@ -5,16 +5,16 @@ const userSchema = new mongoose.Schema(
   {
     name: {
       type: String,
-      required: [true, 'Please provide your full name'],
+      required: [true, 'User full name is required'],
       trim: true,
     },
     email: {
       type: String,
-      required: [true, 'Please provide an email address'],
+      required: [true, 'User email address is required'],
       unique: true,
       lowercase: true,
       trim: true,
-      match: [/^\S+@\S+\.\S+$/, 'Please provide a valid email address'],
+      match: [/^\S+@\S+\.\S+$/, 'Please enter a valid email address'],
     },
     password: {
       type: String,
@@ -23,6 +23,11 @@ const userSchema = new mongoose.Schema(
     image: {
       type: String,
       default: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
+    },
+    provider: {
+      type: String,
+      enum: ['credentials', 'google', 'github'],
+      default: 'credentials',
     },
     role: {
       type: String,
