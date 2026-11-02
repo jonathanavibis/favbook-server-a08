@@ -1,72 +1,59 @@
-# BookHype Server — Online Library Management API
+# 📚 BookNook Server — Express.js & MongoDB Library Backend
 
-> REST API backend server for **BookHype**, a modern online library platform where readers can browse books, add new titles, borrow books with real-time inventory management, and return borrowed copies.
-
-- **Frontend Repository**: [https://github.com/jonathanavibis/bookhive-a08](https://github.com/jonathanavibis/bookhive-a08)
-- **Backend Repository**: [https://github.com/jonathanavibis/backend-bookhive-a08](https://github.com/jonathanavibis/backend-bookhive-a08)
-- **Live Backend API**: Deployed on Vercel / Render
+Welcome to the **BookNook Server**, a high-performance RESTful API backend built with **Express.js**, **Mongoose**, and **MongoDB Atlas** for managing online library catalogs, user loans, and authentication.
 
 ---
 
-## 🌟 Key Features & Architectural Highlights
+## 🌟 Key Features
 
-1. **Complete Library CRUD Operations**:
-   - `GET /books`: Public catalog listing with category filtering, search, and sorting.
-   - `GET /books/:id`: Individual book specifications and availability details.
-   - `POST /books`: Protected route for registered users to contribute books.
-   - `PATCH /books/:id`: Protected route allowing book owners to update information.
-   - `DELETE /books/:id`: Protected route allowing contributors to safely remove books.
-
-2. **Smart Borrowing System & Atomic Inventory Sync ($inc)**:
-   - `POST /borrows`: Borrows a book, decrements `copies` count atomically by 1 using MongoDB `$inc: { copies: -1 }`.
-   - `GET /borrows`: Retrieves all active borrowed books for the logged-in user.
-   - `DELETE /borrows/:id`: Returns a borrowed book and automatically restores 1 copy back to the library inventory using `$inc: { copies: 1 }`.
-
-3. **Double-Borrow Prevention Challenge**:
-   - Enforces business logic ensuring a user cannot borrow the same book twice simultaneously. If an active unreturned borrow exists, the server rejects the request with an explicit error.
-
-4. **Zero-Stock Availability Safeguard**:
-   - Books with `copies <= 0` cannot be borrowed. The server returns a 400 status preventing negative inventory.
-
-5. **JWT Authentication & Authorization**:
-   - Endpoints requiring user context are guarded with token verification (`Bearer <token>`). Tokens are signed using HMAC-SHA256 with robust expiration.
+- **MongoDB Direct Persistence**: Books, borrows, and user accounts are directly persisted into MongoDB Atlas.
+- **Live Formatted JSON Serving**: Every endpoint serves structured, pretty-printed JSON data (`app.set('json spaces', 2)`).
+- **Challenge — Atomic Inventory Management**:
+  - Automatically decrements book copies by 1 with `$inc: -1` when a reader borrows a book.
+  - Automatically increments copies by 1 with `$inc: 1` when a reader returns a book.
+  - Prevents borrowing if available copies reach `0` ("Not Available").
+- **Challenge — No Double Borrow**: Compound uniqueness validation prevents a user from borrowing the same title concurrently until the previous loan is returned.
+- **Challenge — JWT Authentication & Authorization**: Secure route protection with JSON Web Tokens (`Bearer <token>`) and role/ownership checks.
+- **Social OAuth Integration**: Syncs Google and GitHub social logins directly to MongoDB User accounts.
 
 ---
 
-## 🔌 API Routes Summary
+## 🚀 API Endpoints Overview
 
 | Method | Endpoint | Access | Description |
 |---|---|---|---|
-| `GET` | `/books` | Public | List all books (supports `?category=`, `?search=`, `?limit=6`, `?sort=`) |
-| `GET` | `/books/:id` | Public | Get specific book details |
-| `POST` | `/books` | Private (JWT) | Add a new book (Title, Author, Category, Image, Description, Copies) |
-| `PATCH` | `/books/:id` | Private (JWT) | Update book details (Owner/Librarian only) |
-| `DELETE` | `/books/:id` | Private (JWT) | Delete book from library (Owner/Librarian only) |
-| `POST` | `/borrows` | Private (JWT) | Borrow a book (Decrements copies, prevents double-borrow) |
-| `GET` | `/borrows` | Private (JWT) | Get personal borrows for the authenticated user |
-| `DELETE` | `/borrows/:id` | Private (JWT) | Return borrowed book (Restores book copies by 1) |
-| `POST` | `/auth/register` | Public | Register new reader account with password strength checks |
-| `POST` | `/auth/login` | Public | Authenticate reader credentials & return JWT |
-| `POST` | `/jwt` | Public | Issue signed JWT token for verified session |
+| `GET` | `/` | Public | Live server status & MongoDB books archive in formatted JSON |
+| `GET` | `/books` | Public | Fetch all books (with category filter, search & sort) |
+| `GET` | `/books/:id` | Public | Fetch single book details |
+| `POST` | `/books` | **Private (JWT)** | Add new book to MongoDB |
+| `PATCH` | `/books/:id` | **Private (JWT)** | Update book details (contributor/admin only) |
+| `DELETE` | `/books/:id` | **Private (JWT)** | Delete book from catalog (contributor/admin only) |
+| `POST` | `/borrows` | **Private (JWT)** | Borrow a book (`$inc: -1`, no double borrow check) |
+| `GET` | `/borrows` | **Private (JWT)** | Get active borrows for logged-in user |
+| `DELETE` | `/borrows/:id` | **Private (JWT)** | Return a book (`$inc: +1`, marks loan returned) |
+| `POST` | `/auth/register` | Public | Register new user with password validation |
+| `POST` | `/auth/login` | Public | Authenticate user & issue JWT |
+| `POST` | `/auth/social` | Public | Google / GitHub social login sync to MongoDB |
+| `POST` | `/auth/jwt` | Public | Issue / refresh token |
 
 ---
 
 ## 🛠️ Tech Stack
 
-- **Runtime**: Node.js (ES Modules)
+- **Runtime**: Node.js
 - **Framework**: Express.js
-- **Database**: MongoDB Atlas with Mongoose ODM
-- **Authentication**: JSON Web Tokens (`jsonwebtoken`), `bcryptjs`
-- **CORS & Environment**: `cors`, `dotenv`
+- **Database**: MongoDB Atlas via Mongoose ORM
+- **Security**: JWT (jsonwebtoken), bcryptjs password hashing, CORS
+- **Deployment**: Vercel Serverless / Render
 
 ---
 
-## 🚀 Local Development Setup
+## 💻 Local Setup & Development
 
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com/jonathanavibis/backend-bookhive-a08.git
-   cd backend-bookhive-a08
+   git clone <server-repo-url>
+   cd fav-book-server
    ```
 
 2. **Install dependencies**:
@@ -74,18 +61,18 @@
    npm install
    ```
 
-3. **Configure Environment Variables**:
-   Create a `.env` file from `.env.example`:
+3. **Configure Environment Variables (`.env`)**:
    ```env
    PORT=5000
-   MONGODB_URI=your_mongodb_atlas_connection_string
+   NODE_ENV=development
+   MONGODB_URI=your_mongodb_connection_string
    JWT_SECRET=your_jwt_secret_key
-   CLIENT_URL=http://localhost:3000
+   FRONTEND_URL=http://localhost:3000
    ```
 
-4. **Run Server**:
+4. **Start the server**:
    ```bash
    npm run dev
    # or
-   npm start
+   node index.js
    ```
