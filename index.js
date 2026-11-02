@@ -83,10 +83,12 @@ app.get('/', async (req, res) => {
     });
   } catch (error) {
     res.status(200).json({
-      success: true,
+      success: false,
       service: 'BookNook Library API Server',
-      status: 'Active',
-      message: 'MongoDB connection initialized.',
+      status: 'MongoDB Connection Pending or Blocked',
+      message: 'MongoDB Atlas থেকে ডেটা আনা যায়নি।',
+      error: error.message,
+      solution: 'MongoDB Atlas ড্যাশবোর্ডে গিয়ে Network Access-এ 0.0.0.0/0 (Allow Access from Anywhere) যোগ করে সেভ করুন।',
     });
   }
 });
