@@ -8,9 +8,14 @@ import { protect } from '../middleware/auth.js';
 
 const router = express.Router();
 
-// All borrow routes are protected with JWT validation
-router.post('/', protect, borrowBook);
-router.get('/', protect, getMyBorrows);
-router.delete('/:id', protect, returnBook);
+// POST /borrows - Borrow a book (Private)
+// GET /borrows - Get user borrows (Private)
+router.route('/')
+  .post(protect, borrowBook)
+  .get(protect, getMyBorrows);
+
+// DELETE /borrows/:id - Return a book (Private)
+router.route('/:id')
+  .delete(protect, returnBook);
 
 export default router;
