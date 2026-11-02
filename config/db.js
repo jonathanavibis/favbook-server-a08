@@ -5,18 +5,18 @@ const connectDB = async () => {
     const mongoUri =
       process.env.MONGODB_URI ||
       process.env.MONGODB_URL ||
-      'mongodb://localhost:27017/bookhype_db';
+      'mongodb://localhost:27017/fav_book_db';
 
     const conn = await mongoose.connect(mongoUri, {
       serverSelectionTimeoutMS: 8000,
       socketTimeoutMS: 45000,
+      tlsAllowInvalidCertificates: true,
     });
 
-    console.log(`[MongoDB Atlas] Connected successfully: ${conn.connection.host}/${conn.connection.name}`);
+    console.log(`[MongoDB Connected]: ${conn.connection.host}/${conn.connection.name}`);
     return conn;
   } catch (error) {
-    console.error(`[MongoDB Connection Error] ${error.message}`);
-    // Do not crash server in serverless environments, allow retries on subsequent requests
+    console.error(`[MongoDB Connection Error]: ${error.message}`);
   }
 };
 
